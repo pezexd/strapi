@@ -253,8 +253,8 @@ jobs:
   api_ce_sqlite:
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
-    needs: [changes, lint, typescript, unit_back, unit_front]
-    name: '[CE] API Integration (sqlite, package: better-sqlite3, node: ${{ matrix.node }}, shard: ${{ matrix.shard }})'
+    needs: [changes, build, typescript, unit_back, unit_front]
+    name: '[CE] API Integration (sqlite, client: better-sqlite3, node: ${{ matrix.node }}, shard: ${{ matrix.shard }})'
     strategy:
       matrix:
         node: [16, 18, 20]
@@ -363,7 +363,7 @@ jobs:
 
   api_ee_sqlite:
     runs-on: ubuntu-latest
-    needs: [changes, lint, typescript, unit_back, unit_front]
+    needs: [changes, build, typescript, unit_back, unit_front]
     name: '[EE] API Integration (sqlite, client: better-sqlite3, node: ${{ matrix.node }}, shard: ${{ matrix.shard }})'
     if: needs.changes.outputs.backend == 'true' && github.event.pull_request.head.repo.full_name == github.repository && !(github.actor == 'dependabot[bot]' || github.actor == 'dependabot-preview[bot]')
     env:

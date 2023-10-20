@@ -79,10 +79,6 @@ export default class MysqlDialect extends Dialect {
     return true;
   }
 
-  supportsWindowFunctions() {
-    return true;
-  }
-
   usesForeignKeys() {
     return true;
   }
