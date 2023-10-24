@@ -10,7 +10,31 @@ import { selectAdminPermissions } from '../selectors';
 
 import { useEnterprise } from './useEnterprise';
 
-const formatLinks = (menu) => {
+interface TLink {
+  intlLabel: { id: string; defaultMessage: string };
+  to: string;
+  id: string;
+  lockIcon?: boolean;
+  permissions?: unknown[];
+}
+
+interface TMenu {
+  global: TLink[];
+  admin: TLink[];
+}
+
+interface TMenuSection {
+  id: string;
+  intlLabel: { id: string; defaultMessage: string };
+  links: TMenuSectionLink[];
+}
+
+interface TMenuSectionLink extends TLink {
+  hasNotification: boolean;
+  isDisplayed: boolean;
+}
+
+const formatLinks = (menu: TMenuSection[]) => {
   return menu.map((menuSection) => {
     const formattedLinks = menuSection.links.map((link) => ({
       ...link,
@@ -21,10 +45,13 @@ const formatLinks = (menu) => {
   });
 };
 
-const sortLinks = (links) => sortBy(links, (link) => link.id);
+const sortLinks = (links: TLink[]) => sortBy(links, (link) => link.id);
 
 export const useSettingsMenu = () => {
-  const [{ isLoading, menu }, setData] = React.useState({
+  const [{ isLoading, menu }, setData] = React.useState<{
+    isLoading: boolean;
+    menu: TMenuSection[];
+  }>({
     isLoading: true,
     menu: [],
   });
@@ -33,7 +60,7 @@ export const useSettingsMenu = () => {
   const { settings } = useStrapiApp();
   const permissions = useSelector(selectAdminPermissions);
 
-  const { global: globalLinks, admin: adminLinks } = useEnterprise(
+  const { global: globalLinks, admin: adminLinks } = useEnterprise<TMenu, TMenu, TMenu>(
     SETTINGS_LINKS_CE,
     async () => (await import('../../../ee/admin/constants')).SETTINGS_LINKS_EE,
     {
@@ -51,25 +78,19 @@ export const useSettingsMenu = () => {
   );
 
   const addPermissions = React.useCallback(
-    (link) => {
-      if (!link.id) {
-        throw new Error('The settings menu item must have an id attribute.');
-      }
-
-      return {
-        ...link,
-        permissions: permissions.settings?.[link.id]?.main,
-      };
-    },
+    (link: TLink) => ({
+      ...link,
+      permissions: permissions.settings?.[link.id]?.main,
+    }),
     [permissions.settings]
   );
 
   React.useEffect(() => {
     const getData = async () => {
-      const buildMenuPermissions = (sections) =>
+      const buildMenuPermissions = (sections: TMenuSection[]) =>
         Promise.all(
           sections.reduce((acc, section, sectionIndex) => {
-            const buildMenuPermissions = (links) =>
+            const buildMenuPermissions = (links: TMenuSectionLink[]) =>
               links.map(async (link, linkIndex) => ({
                 hasPermission: await hasPermissions(userPermissions, link.permissions),
                 sectionIndex,
@@ -125,12 +146,13 @@ export const useSettingsMenu = () => {
     getData();
   }, [adminLinks, globalLinks, userPermissions, settings, shouldUpdateStrapi, addPermissions]);
 
-  const filterMenu = (menuItem) => {
-    return {
-      ...menuItem,
-      links: menuItem.links.filter((link) => link.isDisplayed),
-    };
+  return {
+    isLoading,
+    menu: menu.map((menuItem) => {
+      return {
+        ...menuItem,
+        links: menuItem.links.filter((link) => link.isDisplayed),
+      };
+    }),
   };
-
-  return { isLoading, menu: menu.map(filterMenu) };
 };
