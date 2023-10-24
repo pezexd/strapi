@@ -1,17 +1,30 @@
-import { useState, useEffect, useCallback } from 'react';
+import * as React from 'react';
 
 import { hasPermissions, useRBACProvider, useStrapiApp, useAppInfo } from '@strapi/helper-plugin';
+import sortBy from 'lodash/sortBy';
 import { useSelector } from 'react-redux';
 
-import { selectAdminPermissions } from '../../selectors';
-import { useEnterprise } from '../useEnterprise';
+import { SETTINGS_LINKS_CE } from '../constants';
+// @ts-expect-error not converted yet
+import { selectAdminPermissions } from '../selectors';
 
-import { LINKS_CE } from './constants';
-import formatLinks from './utils/formatLinks';
-import sortLinks from './utils/sortLinks';
+import { useEnterprise } from './useEnterprise';
 
-const useSettingsMenu = () => {
-  const [{ isLoading, menu }, setData] = useState({
+const formatLinks = (menu) => {
+  return menu.map((menuSection) => {
+    const formattedLinks = menuSection.links.map((link) => ({
+      ...link,
+      isDisplayed: false,
+    }));
+
+    return { ...menuSection, links: formattedLinks };
+  });
+};
+
+const sortLinks = (links) => sortBy(links, (link) => link.id);
+
+export const useSettingsMenu = () => {
+  const [{ isLoading, menu }, setData] = React.useState({
     isLoading: true,
     menu: [],
   });
@@ -21,8 +34,8 @@ const useSettingsMenu = () => {
   const permissions = useSelector(selectAdminPermissions);
 
   const { global: globalLinks, admin: adminLinks } = useEnterprise(
-    LINKS_CE,
-    async () => (await import('../../../../ee/admin/hooks/useSettingsMenu/constants')).LINKS_EE,
+    SETTINGS_LINKS_CE,
+    async () => (await import('../../../ee/admin/constants')).SETTINGS_LINKS_EE,
     {
       combine(ceLinks, eeLinks) {
         return {
@@ -37,7 +50,7 @@ const useSettingsMenu = () => {
     }
   );
 
-  const addPermissions = useCallback(
+  const addPermissions = React.useCallback(
     (link) => {
       if (!link.id) {
         throw new Error('The settings menu item must have an id attribute.');
@@ -51,7 +64,7 @@ const useSettingsMenu = () => {
     [permissions.settings]
   );
 
-  useEffect(() => {
+  React.useEffect(() => {
     const getData = async () => {
       const buildMenuPermissions = (sections) =>
         Promise.all(
@@ -121,5 +134,3 @@ const useSettingsMenu = () => {
 
   return { isLoading, menu: menu.map(filterMenu) };
 };
-
-export default useSettingsMenu;
